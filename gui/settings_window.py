@@ -1,154 +1,260 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
+from PyQt5.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
+    QPushButton, QGroupBox, QMessageBox, QFormLayout
+)
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtGui import QFont
 import threading
 
-class SettingsWindow:
+class SettingsWindow(QDialog):
     def __init__(self, parent, config_manager, callback=None):
+        super().__init__(parent)
         self.config_manager = config_manager
         self.callback = callback
         
-        # Pencere oluştur
-        self.window = tk.Toplevel(parent)
-        self.window.title("Ayarlar")
-        self.window.geometry("500x400")
-        self.window.resizable(False, False)
-        self.window.transient(parent)
-        self.window.grab_set()
+        # Pencere ayarları
+        self.setWindowTitle("⚙️ Azure DevOps Ayarları")
+        self.setFixedSize(600, 500)
+        self.setModal(True)
         
         # Mevcut ayarları yükle
         self.config = self.config_manager.get_config()
         
         self.setup_ui()
         self.load_current_settings()
-        
-        # Pencereyi ortala
-        self.center_window()
     
     def setup_ui(self):
         """Ayarlar arayüzünü oluştur"""
-        main_frame = ttk.Frame(self.window, padding="20")
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
         
         # Başlık
-        title_label = ttk.Label(main_frame, text="Azure DevOps Ayarları", 
-                               font=("Arial", 14, "bold"))
-        title_label.pack(pady=(0, 20))
+        title_label = QLabel("🔧 Azure DevOps Ayarları")
+        title_font = QFont("Arial", 16, QFont.Bold)
+        title_label.setFont(title_font)
+        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setStyleSheet("color: #0078d4; margin-bottom: 20px;")
+        layout.addWidget(title_label)
+        
+        # Ana ayarlar grubu
+        settings_group = QGroupBox("Bağlantı Ayarları")
+        settings_layout = QFormLayout(settings_group)
+        settings_layout.setSpacing(15)
         
         # Organization URL
-        ttk.Label(main_frame, text="Organization URL:").pack(anchor=tk.W)
-        self.org_url_var = tk.StringVar()
-        org_entry = ttk.Entry(main_frame, textvariable=self.org_url_var, width=60)
-        org_entry.pack(fill=tk.X, pady=(5, 15))
-        
-        # Yardım metni
-        help_label = ttk.Label(main_frame, 
-                              text="Örnek: https://dev.azure.com/yourorganization", 
-                              foreground="gray", font=("Arial", 8))
-        help_label.pack(anchor=tk.W, pady=(0, 10))
+        self.org_url_edit = QLineEdit()
+        self.org_url_edit.setPlaceholderText("https://dev.azure.com/yourorganization")
+        self.org_url_edit.setStyleSheet("""
+            QLineEdit {
+                padding: 8px;
+                border: 2px solid #ddd;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            QLineEdit:focus {
+                border-color: #0078d4;
+            }
+        """)
+        settings_layout.addRow("🏢 Organization URL:", self.org_url_edit)
         
         # Personal Access Token
-        ttk.Label(main_frame, text="Personal Access Token (PAT):").pack(anchor=tk.W)
-        self.pat_var = tk.StringVar()
-        pat_entry = ttk.Entry(main_frame, textvariable=self.pat_var, 
-                             width=60, show="*")
-        pat_entry.pack(fill=tk.X, pady=(5, 15))
-        
-        # PAT yardım metni
-        pat_help = ttk.Label(main_frame, 
-                            text="Azure DevOps'tan Personal Access Token oluşturun", 
-                            foreground="gray", font=("Arial", 8))
-        pat_help.pack(anchor=tk.W, pady=(0, 10))
+        self.pat_edit = QLineEdit()
+        self.pat_edit.setEchoMode(QLineEdit.Password)
+        self.pat_edit.setPlaceholderText("Azure DevOps PAT token'ınızı girin")
+        self.pat_edit.setStyleSheet("""
+            QLineEdit {
+                padding: 8px;
+                border: 2px solid #ddd;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            QLineEdit:focus {
+                border-color: #0078d4;
+            }
+        """)
+        settings_layout.addRow("🔑 Personal Access Token (PAT):", self.pat_edit)
         
         # Project Name
-        ttk.Label(main_frame, text="Proje Adı:").pack(anchor=tk.W)
-        self.project_var = tk.StringVar()
-        project_entry = ttk.Entry(main_frame, textvariable=self.project_var, width=60)
-        project_entry.pack(fill=tk.X, pady=(5, 15))
+        self.project_edit = QLineEdit()
+        self.project_edit.setPlaceholderText("Proje adını girin")
+        self.project_edit.setStyleSheet("""
+            QLineEdit {
+                padding: 8px;
+                border: 2px solid #ddd;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            QLineEdit:focus {
+                border-color: #0078d4;
+            }
+        """)
+        settings_layout.addRow("📁 Proje Adı:", self.project_edit)
+        
+        layout.addWidget(settings_group)
+        
+        # Yardım metni
+        help_label = QLabel("""
+        💡 Yardım:
+        • Organization URL: Azure DevOps organizasyonunuzun URL'i
+        • PAT Token: Azure DevOps → User Settings → Personal Access Tokens
+        • Proje Adı: Kullanıcıları eklemek istediğiniz projenin adı
+        """)
+        help_label.setStyleSheet("""
+            QLabel {
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                padding: 10px;
+                color: #6c757d;
+                font-size: 11px;
+            }
+        """)
+        layout.addWidget(help_label)
         
         # Test bağlantısı butonu
-        self.test_btn = ttk.Button(main_frame, text="🔗 Bağlantıyı Test Et", 
-                                  command=self.test_connection)
-        self.test_btn.pack(pady=10)
+        self.test_btn = QPushButton("🔗 Bağlantıyı Test Et")
+        self.test_btn.clicked.connect(self.test_connection)
+        self.test_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #17a2b8;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 4px;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #138496;
+            }
+            QPushButton:disabled {
+                background-color: #6c757d;
+            }
+        """)
+        layout.addWidget(self.test_btn)
         
-        # Buton çerçevesi
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X, pady=(20, 0))
-        
-        # Kaydet butonu
-        save_btn = ttk.Button(button_frame, text="💾 Kaydet", 
-                             command=self.save_settings)
-        save_btn.pack(side=tk.RIGHT, padx=(10, 0))
+        # Buton grubu
+        button_layout = QHBoxLayout()
         
         # İptal butonu
-        cancel_btn = ttk.Button(button_frame, text="❌ İptal", 
-                               command=self.window.destroy)
-        cancel_btn.pack(side=tk.RIGHT)
-    
-    def center_window(self):
-        """Pencereyi ekranın ortasına yerleştir"""
-        self.window.update_idletasks()
-        x = (self.window.winfo_screenwidth() // 2) - (500 // 2)
-        y = (self.window.winfo_screenheight() // 2) - (400 // 2)
-        self.window.geometry(f"500x400+{x}+{y}")
+        cancel_btn = QPushButton("❌ İptal")
+        cancel_btn.clicked.connect(self.reject)
+        cancel_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #6c757d;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 4px;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #5a6268;
+            }
+        """)
+        
+        # Kaydet butonu
+        save_btn = QPushButton("💾 Kaydet")
+        save_btn.clicked.connect(self.save_settings)
+        save_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #28a745;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 4px;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #218838;
+            }
+        """)
+        
+        button_layout.addStretch()
+        button_layout.addWidget(cancel_btn)
+        button_layout.addWidget(save_btn)
+        
+        layout.addLayout(button_layout)
     
     def load_current_settings(self):
         """Mevcut ayarları form alanlarına yükle"""
-        self.org_url_var.set(self.config.get('organization_url', ''))
-        self.pat_var.set(self.config.get('pat_token', ''))
-        self.project_var.set(self.config.get('project_name', ''))
+        self.org_url_edit.setText(self.config.get('organization_url', ''))
+        self.pat_edit.setText(self.config.get('pat_token', ''))
+        self.project_edit.setText(self.config.get('project_name', ''))
     
     def test_connection(self):
         """Bağlantıyı test et"""
-        org_url = self.org_url_var.get().strip()
-        pat_token = self.pat_var.get().strip()
-        project_name = self.project_var.get().strip()
+        org_url = self.org_url_edit.text().strip()
+        pat_token = self.pat_edit.text().strip()
+        project_name = self.project_edit.text().strip()
         
         if not all([org_url, pat_token, project_name]):
-            messagebox.showerror("Hata", "Lütfen tüm alanları doldurun")
+            QMessageBox.critical(self, "Hata", "Lütfen tüm alanları doldurun")
             return
         
         # Test butonunu devre dışı bırak
-        self.test_btn.config(state="disabled", text="Test ediliyor...")
+        self.test_btn.setEnabled(False)
+        self.test_btn.setText("🔄 Test ediliyor...")
         
-        # Thread'de test et
-        thread = threading.Thread(target=self._test_connection_thread, 
-                                args=(org_url, pat_token, project_name))
-        thread.daemon = True
-        thread.start()
-    
-    def _test_connection_thread(self, org_url, pat_token, project_name):
-        """Bağlantı testini thread'de çalıştır"""
+        # Direkt test et (thread kullanmadan)
         try:
-            from core.azure_client import AzureDevOpsClient
+            from core.azure_rest_client import AzureDevOpsRESTClient
             
-            client = AzureDevOpsClient(org_url, pat_token, project_name)
+            # URL formatını düzelt
+            if not org_url.startswith('https://'):
+                org_url = f"https://dev.azure.com/{org_url}"
+            
+            print(f"🔄 Bağlantı test ediliyor...")
+            print(f"📍 Organization: {org_url}")
+            print(f"📂 Project: {project_name}")
+            
+            client = AzureDevOpsRESTClient(org_url, project_name, pat_token)
             result = client.test_connection()
             
             if result:
-                messagebox.showinfo("Başarılı", "✅ Bağlantı başarıyla test edildi!")
+                print("✅ Bağlantı testi başarılı!")
+                QMessageBox.information(self, "Başarılı", "✅ Bağlantı başarıyla test edildi!\n\n" +
+                                      f"Organization: {org_url}\n" +
+                                      f"Project: {project_name}")
             else:
-                messagebox.showerror("Hata", "❌ Bağlantı test edilemedi. Lütfen ayarları kontrol edin.")
-                
+                print("❌ Bağlantı testi başarısız!")
+                QMessageBox.critical(self, "Hata", "❌ Bağlantı test edilemedi.\n\n" +
+                                    "Lütfen şunları kontrol edin:\n" +
+                                    "• PAT token geçerli mi?\n" +
+                                    "• Organization URL doğru mu?\n" +
+                                    "• Project adı doğru mu?\n" +
+                                    "• İnternet bağlantınız var mı?")
         except Exception as e:
-            messagebox.showerror("Hata", f"❌ Bağlantı hatası:\n{str(e)}")
-        
+            print(f"❌ Bağlantı test hatası: {e}")
+            QMessageBox.critical(self, "Hata", f"❌ Bağlantı hatası:\n\n{str(e)}\n\n" +
+                               "Lütfen şunları kontrol edin:\n" +
+                               "• PAT token doğru girildi mi?\n" +
+                               "• Organization URL formatı: https://dev.azure.com/organizasyon\n" +
+                               "• Project adı doğru yazıldı mı?")
         finally:
-            # Test butonunu yeniden etkinleştir
-            self.test_btn.config(state="normal", text="🔗 Bağlantıyı Test Et")
+            # Test butonunu her durumda yeniden etkinleştir
+            self.test_btn.setEnabled(True)
+            self.test_btn.setText("🔗 Bağlantıyı Test Et")
+            print("🔄 Test butonu yeniden etkinleştirildi")
+    
+
     
     def save_settings(self):
         """Ayarları kaydet"""
-        org_url = self.org_url_var.get().strip()
-        pat_token = self.pat_var.get().strip()
-        project_name = self.project_var.get().strip()
+        org_url = self.org_url_edit.text().strip()
+        pat_token = self.pat_edit.text().strip()
+        project_name = self.project_edit.text().strip()
         
         if not all([org_url, pat_token, project_name]):
-            messagebox.showerror("Hata", "Lütfen tüm alanları doldurun")
+            QMessageBox.critical(self, "Hata", "Lütfen tüm alanları doldurun")
             return
         
         # URL formatını kontrol et
         if not org_url.startswith('https://'):
-            messagebox.showerror("Hata", "Organization URL 'https://' ile başlamalıdır")
+            QMessageBox.critical(self, "Hata", "Organization URL 'https://' ile başlamalıdır")
             return
         
         try:
@@ -159,14 +265,14 @@ class SettingsWindow:
                 'project_name': project_name
             })
             
-            messagebox.showinfo("Başarılı", "Ayarlar başarıyla kaydedildi!")
+            QMessageBox.information(self, "Başarılı", "Ayarlar başarıyla kaydedildi!")
             
             # Callback'i çağır
             if self.callback:
                 self.callback()
             
             # Pencereyi kapat
-            self.window.destroy()
+            self.accept()
             
         except Exception as e:
-            messagebox.showerror("Hata", f"Ayarlar kaydedilemedi:\n{str(e)}")
+            QMessageBox.critical(self, "Hata", f"Ayarlar kaydedilemedi:\n{str(e)}")
