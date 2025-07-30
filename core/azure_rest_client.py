@@ -17,37 +17,80 @@ from urllib.parse import quote
 class AzureDevOpsRESTClient:
     """Azure DevOps REST API Client"""
     
-    def __init__(self, organization_url: str, project_name: str, pat_token: str = None):
-        """
-        Azure DevOps REST API Client başlatma
+    def __init__(self, organization_url: str, project_name: str, pat_token: str, debug_mode: bool = True):
+        """Azure DevOps REST API Client başlatıcı
         
         Args:
             organization_url: Azure DevOps organizasyon URL'i
             project_name: Proje adı
-            pat_token: Personal Access Token (opsiyonel, eski sürümlerle uyumluluk için)
+            pat_token: Personal Access Token
+            debug_mode: Debug modu (detaylı logging)
         """
+        # Debug modu
+        self.debug_mode = debug_mode
+        
+        # URL'yi temizle ve düzenle
         self.organization_url = organization_url.rstrip('/')
+        if not self.organization_url.startswith('https://'):
+            self.organization_url = f"https://{self.organization_url}"
+        
+        # Organizasyon adını çıkar
+        self.organization_name = self.organization_url.split('/')[-1]
+        
         self.project_name = project_name
         self.pat_token = pat_token
         
-        # API endpoints
-        self.base_url = f"{self.organization_url}/_apis"
-        self.vsaex_base_url = f"https://vsaex.dev.azure.com/{self.organization_url.split('/')[-1]}/_apis"
-        self.api_version = "7.1"
+        # API base URL'leri
+        self.base_url = f"{self.organization_url}/{self.project_name}/_apis"
+        self.vsaex_base_url = f"https://vsaex.dev.azure.com/{self.organization_name}/_apis"
+        self.api_version = "7.1-preview.3"
         
-        # Authentication headers
-        self.headers = {'Content-Type': 'application/json'}
+        # HTTP headers
+        self.headers = {
+            'Authorization': f'Basic {base64.b64encode(f":{self.pat_token}".encode()).decode()}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
         
-        # Kimlik Doğrulama Yöntemi Seçimi
-        if pat_token:
-            # PAT token ile authentication (geriye dönük uyumluluk için)
-            print("⚠️ PAT token: Azure CLI kullanımı önerilir")
-            auth_string = f":{pat_token}"
-            encoded_auth = base64.b64encode(auth_string.encode()).decode()
-            self.headers['Authorization'] = f'Basic {encoded_auth}'
-            print("✅ PAT token doğrulama başarılı")
-        else:
-            # Azure CLI tabanlı kimlik doğrulama
+        # Cache sistemi
+        self._teams_cache = None
+        self._teams_cache_time = None
+        self._org_users_cache = None
+        self._org_users_cache_time = None
+        self._cache_ttl = 300  # 5 dakika
+    
+    def _debug_log(self, message: str, level: str = "INFO"):
+        """Debug modu için detaylı logging"""
+        if self.debug_mode:
+            icons = {
+                "INFO": "ℹ️",
+                "SUCCESS": "✅", 
+                "WARNING": "⚠️",
+                "ERROR": "❌",
+                "API": "🌐",
+                "STEP": "🔄",
+                "CACHE": "💾"
+            }
+            icon = icons.get(level, "📝")
+            print(f"{icon} [{level}] {message}")
+    
+    def _debug_api_call(self, method: str, url: str, status_code: int = None, response_data: dict = None):
+        """API çağrıları için özel debug logging"""
+        if self.debug_mode:
+            print(f"\n🌐 API CALL: {method} {url}")
+            if status_code:
+                status_icon = "✅" if 200 <= status_code < 300 else "❌"
+                print(f"{status_icon} Status Code: {status_code}")
+            if response_data:
+                print(f"📄 Response: {json.dumps(response_data, indent=2)[:500]}...")
+        
+        if self.debug_mode:
+            print(f"\n🔧 DEBUG MODE AKTIF - Detaylı logging etkin")
+            print(f"🔗 Organization: {self.organization_name}")
+            print(f"📁 Project: {self.project_name}")
+            print(f"🔑 PAT Token: {'*' * 20}...{self.pat_token[-4:] if len(self.pat_token) > 4 else '****'}")
+            print(f"🌐 Base URL: {self.base_url}")
+            print(f"🌐 VSAEX URL: {self.vsaex_base_url}")
             print("✅ Azure CLI doğrulama hazır")
             # Not: Az CLI kimlik bilgileri otomatik kullanılacak
         
