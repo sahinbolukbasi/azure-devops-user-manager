@@ -20,6 +20,15 @@ wheels/
 .installed.cfg
 *.egg
 
+# Virtual Environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.env
+.venv
+
 # Config files
 config.ini
 .app_key
