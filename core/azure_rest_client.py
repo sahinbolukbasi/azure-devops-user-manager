@@ -631,6 +631,8 @@ class AzureDevOpsRESTClient:
         Returns:
             bool: İşlem başarılı ise True, değilse False
         """
+        self._debug_log(f"\n🎯 GRUP ATAMA BAŞLADI: {user_email} -> {group_name} ({role})", "STEP")
+        
         try:
             print(f"\n==== GRUP EKLEME ====")
             print(f"Ekleniyor: {user_email} -> {group_name} ({role})")
