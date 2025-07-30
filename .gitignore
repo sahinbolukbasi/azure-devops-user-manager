@@ -30,6 +30,7 @@ venv.bak/
 .venv
 
 # Config files
+config.json
 config.ini
 .app_key
 
