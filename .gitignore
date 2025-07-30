@@ -20,6 +20,22 @@ wheels/
 .installed.cfg
 *.egg
 
+# Build and Distribution
+build/
+dist/
+*.spec
+*.exe
+*.dmg
+*.pkg
+*.deb
+*.rpm
+*.msi
+*.app
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
 # Virtual Environments
 env/
 venv/
